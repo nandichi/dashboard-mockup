@@ -13,6 +13,8 @@ interface DemoContextType {
   completeScan: () => void;
   completeMatch: () => void;
   completeOutreach: () => void;
+  /** Zet scannen, matchen en outreach direct op voltooid (demo/presentatie). */
+  completeFullDemo: () => void;
   resetDemo: () => void;
   canRunMatcher: boolean;
   canRunOutreach: boolean;
@@ -71,6 +73,14 @@ export default function DemoProvider({ children }: { children: React.ReactNode }
     setState((prev) => ({ ...prev, outreachCompleted: true }));
   }, []);
 
+  const completeFullDemo = useCallback(() => {
+    setState({
+      scanCompleted: true,
+      matchCompleted: true,
+      outreachCompleted: true,
+    });
+  }, []);
+
   const resetDemo = useCallback(() => {
     setState(initialState);
     try {
@@ -84,7 +94,7 @@ export default function DemoProvider({ children }: { children: React.ReactNode }
   const canRunOutreach = state.matchCompleted;
 
   return (
-    <DemoContext.Provider value={{ state, completeScan, completeMatch, completeOutreach, resetDemo, canRunMatcher, canRunOutreach }}>
+    <DemoContext.Provider value={{ state, completeScan, completeMatch, completeOutreach, completeFullDemo, resetDemo, canRunMatcher, canRunOutreach }}>
       {children}
     </DemoContext.Provider>
   );

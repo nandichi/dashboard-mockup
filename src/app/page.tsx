@@ -7,7 +7,10 @@ import { useDemo } from './components/DemoContext';
 import { dashboardStats, matchCategories, pipelineFunnel } from '@/data/stats';
 
 export default function OverzichtPage() {
-  const { state } = useDemo();
+  const { state, completeFullDemo } = useDemo();
+
+  const demoVolledig =
+    state.scanCompleted && state.matchCompleted && state.outreachCompleted;
 
   const vacatures = dashboardStats.vacatures.value;
   const hotMatches = dashboardStats.hotMatches.value;
@@ -28,6 +31,24 @@ export default function OverzichtPage() {
   return (
     <div className="animate-fade-in">
       <DashboardHero />
+
+      {!demoVolledig && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 p-4 rounded-xl border border-border bg-bg-card">
+          <p className="text-sm text-text-secondary">
+            Markeert scannen, matchen en outreach als uitgevoerd zonder agent-runs. AI Team en andere pagina&apos;s gedragen zich alsof de demo klaar is.
+          </p>
+          <button
+            type="button"
+            onClick={completeFullDemo}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-liber text-white hover:opacity-90 transition-opacity shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Demo voltooien (instant)
+          </button>
+        </div>
+      )}
 
       {nothingDone && (
         <div className="card mb-6 border-l-[3px] border-l-liber">
