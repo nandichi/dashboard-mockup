@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -15,6 +15,8 @@ const agentDemoMap: Record<string, 'scan' | 'match' | 'outreach'> = {
   lead_matcher: 'match',
   outreach_assistant: 'outreach',
 };
+
+const FULL_DEMO_QUEUE = ['lead_researcher', 'lead_matcher', 'outreach_assistant'];
 
 export default function AITeamPage() {
   const { state, completeScan, completeMatch, completeOutreach, canRunMatcher, canRunOutreach } = useDemo();
@@ -32,6 +34,8 @@ export default function AITeamPage() {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showOutreachSettings, setShowOutreachSettings] = useState(false);
   const [outreach, setOutreach] = useState(getOutreachSettings(brand));
+  const [fullDemoActive, setFullDemoActive] = useState(false);
+  const demoQueueRef = useRef<string[]>([]);
 
   const isAgentCompleted = (agentId: string) => {
     const type = agentDemoMap[agentId];
@@ -63,12 +67,45 @@ export default function AITeamPage() {
     }, 800);
   }, []);
 
+  const runFullDemo = useCallback(() => {
+    demoQueueRef.current = [...FULL_DEMO_QUEUE];
+    setFullDemoActive(true);
+    const first = demoQueueRef.current[0];
+    setLoadingAgent(first);
+    setTimeout(() => {
+      setLoadingAgent(null);
+      setRunningAgent(first);
+    }, 800);
+  }, []);
+
   const handleComplete = useCallback((agentId: string) => {
     const type = agentDemoMap[agentId];
     if (type === 'scan') completeScan();
     if (type === 'match') completeMatch();
     if (type === 'outreach') completeOutreach();
+
+    if (demoQueueRef.current.length > 0) {
+      demoQueueRef.current = demoQueueRef.current.filter((id) => id !== agentId);
+      const next = demoQueueRef.current[0];
+      if (next) {
+        setTimeout(() => {
+          setRunningAgent(next);
+        }, 1500);
+      } else {
+        setFullDemoActive(false);
+      }
+    }
   }, [completeScan, completeMatch, completeOutreach]);
+
+  const handlePanelClose = useCallback(() => {
+    setRunningAgent(null);
+    if (fullDemoActive) {
+      demoQueueRef.current = [];
+      setFullDemoActive(false);
+    }
+  }, [fullDemoActive]);
+
+  const allCompleted = state.scanCompleted && state.matchCompleted && state.outreachCompleted;
 
   const statusColors: Record<string, string> = {
     active: 'bg-placed',
@@ -80,33 +117,62 @@ export default function AITeamPage() {
     <div className="animate-fade-in">
       <PageHeader title="AI Team" subtitle="Beheer je AI-agenten en hun configuratie" />
 
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.scanCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
-            {state.scanCompleted ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-            ) : '1'}
-          </span>
-          <span className={cn('text-xs font-medium', state.scanCompleted ? 'text-placed' : 'text-text-muted')}>Scannen</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.scanCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
+              {state.scanCompleted ? (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              ) : '1'}
+            </span>
+            <span className={cn('text-xs font-medium', state.scanCompleted ? 'text-placed' : 'text-text-muted')}>Scannen</span>
+          </div>
+          <div className={cn('w-8 h-0.5 rounded-full', state.scanCompleted ? 'bg-placed' : 'bg-border')} />
+          <div className="flex items-center gap-2">
+            <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.matchCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
+              {state.matchCompleted ? (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              ) : '2'}
+            </span>
+            <span className={cn('text-xs font-medium', state.matchCompleted ? 'text-placed' : 'text-text-muted')}>Matchen</span>
+          </div>
+          <div className={cn('w-8 h-0.5 rounded-full', state.matchCompleted ? 'bg-placed' : 'bg-border')} />
+          <div className="flex items-center gap-2">
+            <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.outreachCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
+              {state.outreachCompleted ? (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+              ) : '3'}
+            </span>
+            <span className={cn('text-xs font-medium', state.outreachCompleted ? 'text-placed' : 'text-text-muted')}>Outreach</span>
+          </div>
         </div>
-        <div className={cn('w-8 h-0.5 rounded-full', state.scanCompleted ? 'bg-placed' : 'bg-border')} />
-        <div className="flex items-center gap-2">
-          <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.matchCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
-            {state.matchCompleted ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-            ) : '2'}
-          </span>
-          <span className={cn('text-xs font-medium', state.matchCompleted ? 'text-placed' : 'text-text-muted')}>Matchen</span>
-        </div>
-        <div className={cn('w-8 h-0.5 rounded-full', state.matchCompleted ? 'bg-placed' : 'bg-border')} />
-        <div className="flex items-center gap-2">
-          <span className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold', state.outreachCompleted ? 'bg-placed text-white' : 'bg-border text-text-muted')}>
-            {state.outreachCompleted ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-            ) : '3'}
-          </span>
-          <span className={cn('text-xs font-medium', state.outreachCompleted ? 'text-placed' : 'text-text-muted')}>Outreach</span>
-        </div>
+
+        <button
+          onClick={runFullDemo}
+          disabled={fullDemoActive || loadingAgent !== null || runningAgent !== null}
+          className={cn(
+            'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shrink-0',
+            'bg-linear-to-r from-liber to-liber/80 text-white shadow-sm',
+            'hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          {fullDemoActive ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>Demo loopt...</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+              </svg>
+              <span>{allCompleted ? 'Hele demo opnieuw uitvoeren' : 'Hele demo uitvoeren'}</span>
+            </>
+          )}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
@@ -344,8 +410,9 @@ export default function AITeamPage() {
 
       {runningAgent && (
         <AgentExecutionPanel
+          key={runningAgent}
           agentId={runningAgent}
-          onClose={() => setRunningAgent(null)}
+          onClose={handlePanelClose}
           onComplete={() => handleComplete(runningAgent)}
         />
       )}
